@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content \"c:\\\\Users\\\\danim\\\\OneDrive\\\\Desktop\\\\last_race\\\\client\\\\src\\\\App.jsx\" -Raw)"
+    ]
+  }
+}

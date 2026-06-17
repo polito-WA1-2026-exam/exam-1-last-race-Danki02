@@ -1,6 +1,6 @@
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext.jsx';
+import './NavBar.css';
 
 export default function NavBar() {
   const { user, logout } = useAuth();
@@ -8,31 +8,20 @@ export default function NavBar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/login');
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
-      <Container>
-        <Navbar.Brand as={Link} to="/">Last Race</Navbar.Brand>
-        <Navbar.Toggle aria-controls="main-nav" />
-        <Navbar.Collapse id="main-nav">
-          <Nav className="ms-auto align-items-center">
-            {user ? (
-              <>
-                <Nav.Link as={Link} to="/game">Play</Nav.Link>
-                <Nav.Link as={Link} to="/ranking">Ranking</Nav.Link>
-                <Navbar.Text className="me-3">Hello, {user.username}</Navbar.Text>
-                <Button variant="outline-light" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Nav.Link as={Link} to="/login">Login</Nav.Link>
-            )}
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+    <nav className="navbar">
+      <Link to="/" className="navbar-brand">Last Race</Link>
+      {user && (
+        <div className="navbar-links">
+          <Link to="/game">Play</Link>
+          <Link to="/ranking">Ranking</Link>
+          <span className="navbar-user">{user.username}</span>
+          <button className="navbar-logout" onClick={handleLogout}>Logout</button>
+        </div>
+      )}
+    </nav>
   );
 }

@@ -28,3 +28,39 @@ export async function getCurrentUser() {
   if (!res.ok) throw new Error('Failed to fetch session.');
   return await res.json();
 }
+
+export async function getNetwork() {
+  const res = await fetch(`${SERVER}/network`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch network.');
+  return res.json();
+}
+
+export async function getEvents() {
+  const res = await fetch(`${SERVER}/events`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch events.');
+  return res.json();
+}
+
+export async function saveGame(score) {
+  const res = await fetch(`${SERVER}/games`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ score }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to save game.');
+  return data;
+}
+
+export async function getGameSetup() {
+  const res = await fetch(`${SERVER}/game/setup`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch game setup.');
+  return res.json();
+}
+
+export async function getRanking() {
+  const res = await fetch(`${SERVER}/ranking`, { credentials: 'include' });
+  if (!res.ok) throw new Error('Failed to fetch ranking.');
+  return res.json();
+}

@@ -14,14 +14,18 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand">Last Race</Link>
-      {user && (
-        <div className="navbar-links">
-          <Link to="/game">Play</Link>
-          <Link to="/ranking">Ranking</Link>
-          <span className="navbar-user">{user.username}</span>
-          <button className="navbar-logout" onClick={handleLogout}>Logout</button>
-        </div>
-      )}
+      <div className="navbar-links">
+        {user ? (
+          <>
+            <Link to="/game">Play</Link>
+            <Link to="/ranking">Ranking</Link>
+            <span className="navbar-user">{user.username}</span>
+            <button className="navbar-logout" onClick={handleLogout}>Logout</button>
+          </>
+        ) : (
+          <Link to="/login" className="navbar-login-link">Login</Link>
+        )}
+      </div>
     </nav>
   );
 }

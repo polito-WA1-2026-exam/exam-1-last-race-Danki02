@@ -1,84 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNetwork, getEvents, getGameSetup, saveGame } from '../api.js';
+import { getNetwork, getSegments, getGameSetup, executeGame } from '../api.js';
 import './GamePage.css';
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function getAllStations(network) {
-  const map = new Map();
-  for (const line of network) {
-    for (const s of line.stations) {
-      if (!map.has(s.id)) map.set(s.id, { ...s });
-    }
-  }
-  return [...map.values()];
-}
-
-function getLinesForStation(network, stationId) {
-  return network.filter(line => line.stations.some(s => s.id === stationId));
-}
-
-function getStopsBetween(line, fromId, toId) {
-  const from = line.stations.find(s => s.id === fromId);
-  const to = line.stations.find(s => s.id === toId);
-  if (!from || !to) return [];
-  const goingForward = from.position < to.position;
-  const stops = line.stations.filter(s =>
-    goingForward
-      ? s.position > from.position && s.position <= to.position
-      : s.position >= to.position && s.position < from.position
-  );
-  return goingForward
-    ? stops.sort((a, b) => a.position - b.position)
-    : stops.sort((a, b) => b.position - a.position);
-}
-
 
 export default function GamePage() {
   const navigate = useNavigate();
 
-  const [phase, setPhase] = useState('loading');
+  // Loaded data
   const [network, setNetwork] = useState([]);
-  const [allEvents, setAllEvents] = useState([]);
-
-  // Game state
+  const [segments, setSegments] = useState([]);
   const [startStation, setStartStation] = useState(null);
   const [destination, setDestination] = useState(null);
-  const [shuffledEvents, setShuffledEvents] = useState([]);
 
-  // Planning state
-  const [currentStation, setCurrentStation] = useState(null);
-  const [plannedStops, setPlannedStops] = useState([]);
-  const [selectedLineId, setSelectedLineId] = useState('');
-  const [selectedTargetId, setSelectedTargetId] = useState('');
-
-  // Execution state
-  const [execStep, setExecStep] = useState(0);
-  const [score, setScore] = useState(20);
-  const [eventLog, setEventLog] = useState([]);
-
-  // Result state
-  const [saving, setSaving] = useState(false);
-  const [savedGame, setSavedGame] = useState(null);
+  // Phase: loading | setup | planning | executing | execution | result
+  const [phase, setPhase] = useState('loading');
   const [error, setError] = useState('');
 
+  // Planning
+  const [route, setRoute] = useState([]);       // [stationId, ...]
+  const routeRef = useRef([]);                  // always-current mirror for timer callback
+  const [timeLeft, setTimeLeft] = useState(90);
+
+  // Execution / Result
+  const [gameResult, setGameResult] = useState(null);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  // ── Initial load ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([getNetwork(), getEvents(), getGameSetup()])
-      .then(([net, evts, setup]) => {
+    Promise.all([getNetwork(), getGameSetup()])
+      .then(([net, setup]) => {
         setNetwork(net);
-        setAllEvents(evts);
         setStartStation(setup.startStation);
         setDestination(setup.destination);
-        setCurrentStation(setup.startStation);
-        setShuffledEvents(shuffle(evts));
         setPhase('setup');
       })
       .catch(err => {
@@ -87,71 +41,106 @@ export default function GamePage() {
       });
   }, []);
 
-  const availableLines = currentStation ? getLinesForStation(network, currentStation.id) : [];
-  const selectedLine = network.find(l => l.id === Number(selectedLineId));
-  const targetOptions = selectedLine
-    ? selectedLine.stations.filter(s => s.id !== currentStation?.id)
-    : [];
+  // ── Enter planning: load segments, reset route ────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'planning') return;
 
-  const addLeg = () => {
-    if (!selectedLine || !selectedTargetId) return;
-    const target = selectedLine.stations.find(s => s.id === Number(selectedTargetId));
-    if (!target) return;
-    const stops = getStopsBetween(selectedLine, currentStation.id, target.id);
-    const newStops = stops.map(s => ({ station: s, lineName: selectedLine.name }));
-    setPlannedStops(prev => [...prev, ...newStops]);
-    setCurrentStation(target);
-    setSelectedLineId('');
-    setSelectedTargetId('');
-  };
+    setTimeLeft(90);
+    routeRef.current = [startStation?.id];
+    setRoute([startStation?.id]);
 
-  const resetPlanning = () => {
-    setPlannedStops([]);
-    setCurrentStation(startStation);
-    setSelectedLineId('');
-    setSelectedTargetId('');
-  };
+    getSegments()
+      .then(setSegments)
+      .catch(err => setError(err.message));
+  }, [phase, startStation]);
 
-  const revealNext = () => {
-    const idx = execStep;
-    if (idx >= plannedStops.length) return;
-    const event = shuffledEvents[idx % shuffledEvents.length];
-    const { station, lineName } = plannedStops[idx];
-    const newScore = score + event.effect;
-    setEventLog(prev => [...prev, { station, lineName, event, score: newScore }]);
-    setScore(newScore);
-    setExecStep(idx + 1);
-  };
+  // ── 90-second planning timer ──────────────────────────────────────────────────
+  const submitRouteRef = useRef(null); // forward ref to avoid stale closure
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (phase !== 'planning') return;
+
+    // Countdown display
+    const startTime = Date.now();
+    const countInterval = setInterval(() => {
+      const remaining = Math.max(0, Math.round((90000 - (Date.now() - startTime)) / 1000));
+      setTimeLeft(remaining);
+    }, 500);
+
+    // Auto-submit after 90 s
+    const timeout = setTimeout(() => {
+      clearInterval(countInterval);
+      setTimeLeft(0);
+      submitRouteRef.current?.();
+    }, 90000);
+
+    return () => {
+      clearInterval(countInterval);
+      clearTimeout(timeout);
+    };
+  }, [phase]);
+
+  // ── Submit route (manual or auto) ─────────────────────────────────────────────
+  const handleSubmit = useCallback(async () => {
+    const currentRoute = routeRef.current;
+    setPhase('executing');
     setSaving(true);
     setError('');
     try {
-      const game = await saveGame(score);
-      setSavedGame(game);
+      const result = await executeGame(currentRoute);
+      setGameResult(result);
+      setStepIndex(0);
+      setPhase(result.valid ? 'execution' : 'result');
     } catch (err) {
       setError(err.message);
+      setPhase('result');
     } finally {
       setSaving(false);
     }
+  }, []);
+
+  // Keep the submit ref in sync
+  useEffect(() => {
+    submitRouteRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  // ── Route building helpers ────────────────────────────────────────────────────
+  const currentStationId = route[route.length - 1];
+
+  const usableSegments = segments.filter(
+    seg => seg.stationA.id === currentStationId || seg.stationB.id === currentStationId
+  );
+
+  const addSegment = (seg) => {
+    const nextId = seg.stationA.id === currentStationId ? seg.stationB.id : seg.stationA.id;
+    const newRoute = [...routeRef.current, nextId];
+    routeRef.current = newRoute;
+    setRoute(newRoute);
   };
 
+  const resetRoute = () => {
+    const initial = [startStation?.id];
+    routeRef.current = initial;
+    setRoute(initial);
+  };
+
+  const undoLastStep = () => {
+    if (route.length <= 1) return;
+    const newRoute = route.slice(0, -1);
+    routeRef.current = newRoute;
+    setRoute(newRoute);
+  };
+
+  // ── Play again ────────────────────────────────────────────────────────────────
   const playAgain = async () => {
     setPhase('loading');
-    setPlannedStops([]);
-    setSelectedLineId('');
-    setSelectedTargetId('');
-    setExecStep(0);
-    setScore(20);
-    setEventLog([]);
-    setSavedGame(null);
     setError('');
+    setGameResult(null);
+    setStepIndex(0);
     try {
       const setup = await getGameSetup();
       setStartStation(setup.startStation);
       setDestination(setup.destination);
-      setCurrentStation(setup.startStation);
-      setShuffledEvents(shuffle(allEvents));
       setPhase('setup');
     } catch (err) {
       setError(err.message);
@@ -159,27 +148,26 @@ export default function GamePage() {
     }
   };
 
-  const reachedDestination =
-    plannedStops.length > 0 &&
-    plannedStops[plannedStops.length - 1]?.station.id === destination?.id;
+  // ── All stations list (for planning map) ──────────────────────────────────────
+  const allStations = [...new Map(
+    network.flatMap(l => l.stations).map(s => [s.id, s])
+  ).values()];
 
-  const allStopsRevealed = execStep >= plannedStops.length;
-
-  // ── LOADING ──────────────────────────────────────────────────────────────────
-  if (phase === 'loading') {
+  // ── LOADING ───────────────────────────────────────────────────────────────────
+  if (phase === 'loading' || phase === 'executing') {
     return (
       <div className="game-page">
-        <p className="game-loading">Loading network…</p>
+        <p className="game-loading">{phase === 'executing' ? 'Validating route…' : 'Loading network…'}</p>
       </div>
     );
   }
 
-  // ── SETUP ────────────────────────────────────────────────────────────────────
+  // ── SETUP ─────────────────────────────────────────────────────────────────────
   if (phase === 'setup') {
     return (
       <div className="game-page">
         <div className="game-panel">
-          <h2 className="phase-title">Mission Briefing</h2>
+          <h2 className="phase-title">Setup — Study the Network</h2>
           {error && <p className="game-error">{error}</p>}
 
           <div className="setup-mission">
@@ -219,138 +207,166 @@ export default function GamePage() {
             ))}
           </div>
 
+          <p className="setup-hint">
+            Memorise the network. In the planning phase you won't see line connections — only a list of segment pairs.
+          </p>
+
           <button className="game-btn primary" onClick={() => setPhase('planning')}>
-            Start Planning
+            Start Planning (90 s)
           </button>
         </div>
       </div>
     );
   }
 
-  // ── PLANNING ─────────────────────────────────────────────────────────────────
+  // ── PLANNING ──────────────────────────────────────────────────────────────────
   if (phase === 'planning') {
+    const reachedDest = currentStationId === destination?.id;
+    const timerClass = timeLeft <= 10 ? 'timer-urgent' : timeLeft <= 30 ? 'timer-warning' : '';
+    const stationName = id => allStations.find(s => s.id === id)?.name ?? id;
+
     return (
-      <div className="game-page">
-        <div className="game-panel">
-          <h2 className="phase-title">Plan Your Route</h2>
-
+      <div className="game-page planning-layout">
+        {/* ── Left: header + segment list ── */}
+        <div className="planning-left">
           <div className="planning-header">
-            <span>From <strong>{startStation?.name}</strong></span>
-            <span className="arrow">→</span>
-            <span>To <strong>{destination?.name}</strong></span>
+            <span>
+              <strong>{startStation?.name}</strong> → <strong>{destination?.name}</strong>
+            </span>
+            <span className={`planning-timer ${timerClass}`}>⏱ {timeLeft}s</span>
           </div>
 
-          <div className="current-pos">
-            Currently at: <strong>{currentStation?.name}</strong>
-            {currentStation?.id === destination?.id && (
-              <span className="reached-badge"> Destination reached!</span>
-            )}
+          <h3 className="segments-title">All Segments</h3>
+          <ul className="segments-list">
+            {segments.map((seg, i) => {
+              const usable =
+                seg.stationA.id === currentStationId ||
+                seg.stationB.id === currentStationId;
+              return (
+                <li
+                  key={i}
+                  className={'segment-item' + (usable ? ' segment-usable' : '')}
+                  onClick={() => usable && !reachedDest && addSegment(seg)}
+                  title={usable && !reachedDest ? 'Click to add this segment' : ''}
+                >
+                  <span className="seg-station">{seg.stationA.name}</span>
+                  <span className="seg-dash"> — </span>
+                  <span className="seg-station">{seg.stationB.name}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* ── Right: route being built + station map ── */}
+        <div className="planning-right">
+          <div className="station-grid">
+            <h3 className="station-grid-title">Stations</h3>
+            <div className="station-chips">
+              {allStations.map(s => (
+                <span
+                  key={s.id}
+                  className={
+                    'station-dot' +
+                    (s.id === startStation?.id ? ' dot-start' : '') +
+                    (s.id === destination?.id ? ' dot-dest' : '') +
+                    (s.id === currentStationId ? ' dot-current' : '')
+                  }
+                >
+                  {s.name}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {plannedStops.length > 0 && (
-            <div className="planned-route">
-              <h4>Planned route ({plannedStops.length} stops)</h4>
-              <ol className="stops-list">
-                {plannedStops.map((item, i) => (
-                  <li key={i} className={item.station.id === destination?.id ? 'stop-dest' : ''}>
-                    <span className="stop-line-tag">{item.lineName}</span>
-                    {item.station.name}
+          <div className="route-panel">
+            <h3 className="route-title">
+              Your Route
+              <span className="route-pos"> — at: <strong>{stationName(currentStationId)}</strong></span>
+            </h3>
+
+            {route.length <= 1 ? (
+              <p className="route-empty">Click a segment to start your journey from <strong>{startStation?.name}</strong></p>
+            ) : (
+              <ol className="route-steps">
+                <li className="route-start">Start: {startStation?.name}</li>
+                {route.slice(1).map((id, i) => (
+                  <li key={i} className={id === destination?.id ? 'step-dest' : ''}>
+                    → {stationName(id)}
                   </li>
                 ))}
               </ol>
+            )}
+
+            {reachedDest && (
+              <p className="reached-badge">Destination reached!</p>
+            )}
+
+            <div className="planning-actions">
+              <button className="game-btn small" onClick={undoLastStep} disabled={route.length <= 1}>
+                Undo
+              </button>
+              <button className="game-btn small" onClick={resetRoute}>
+                Reset
+              </button>
+              <button
+                className="game-btn primary"
+                onClick={handleSubmit}
+                disabled={saving || route.length < 2}
+              >
+                Submit Route
+              </button>
             </div>
-          )}
-
-          {currentStation?.id !== destination?.id && (
-            <div className="leg-form">
-              <h4>Add leg</h4>
-              <div className="leg-selects">
-                <select
-                  value={selectedLineId}
-                  onChange={e => { setSelectedLineId(e.target.value); setSelectedTargetId(''); }}
-                >
-                  <option value="">Choose line…</option>
-                  {availableLines.map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={selectedTargetId}
-                  onChange={e => setSelectedTargetId(e.target.value)}
-                  disabled={!selectedLineId}
-                >
-                  <option value="">Choose station…</option>
-                  {targetOptions.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-
-                <button
-                  className="game-btn secondary"
-                  onClick={addLeg}
-                  disabled={!selectedLineId || !selectedTargetId}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="planning-actions">
-            <button className="game-btn" onClick={resetPlanning}>Reset</button>
-            <button
-              className="game-btn primary"
-              onClick={() => setPhase('execution')}
-              disabled={plannedStops.length === 0}
-            >
-              Execute ({plannedStops.length} stops)
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // ── EXECUTION ────────────────────────────────────────────────────────────────
+  // ── EXECUTION ─────────────────────────────────────────────────────────────────
   if (phase === 'execution') {
+    const { steps, finalScore } = gameResult;
+    const visibleSteps = steps.slice(0, stepIndex);
+    const allRevealed = stepIndex >= steps.length;
+    const latestCoins = visibleSteps.length > 0 ? visibleSteps[visibleSteps.length - 1].coins : 20;
+
     return (
       <div className="game-page">
         <div className="game-panel">
           <h2 className="phase-title">Execution</h2>
 
           <div className="exec-header">
-            <span className="exec-progress">{execStep} / {plannedStops.length} stops</span>
-            <span className={`exec-score ${score >= 0 ? 'pos' : 'neg'}`}>
-              Score: {score > 0 ? '+' : ''}{score}
+            <span className="exec-progress">{stepIndex} / {steps.length} stops</span>
+            <span className={`exec-score ${latestCoins >= 0 ? 'pos' : 'neg'}`}>
+              Coins: {latestCoins >= 0 ? '+' : ''}{latestCoins}
             </span>
           </div>
 
           <div className="event-log">
-            {eventLog.length === 0 && (
+            {stepIndex === 0 && (
               <p className="exec-hint">Press "Next Stop" to start travelling…</p>
             )}
-            {eventLog.map((entry, i) => (
+            {visibleSteps.map((step, i) => (
               <div
                 key={i}
-                className={`event-entry ${entry.event.effect > 0 ? 'ev-pos' : entry.event.effect < 0 ? 'ev-neg' : 'ev-neu'}`}
+                className={`event-entry ${step.event.effect > 0 ? 'ev-pos' : step.event.effect < 0 ? 'ev-neg' : 'ev-neu'}`}
               >
                 <div className="entry-left">
-                  <span className="entry-line-tag">{entry.lineName}</span>
-                  <span className="entry-station">{entry.station.name}</span>
+                  <span className="entry-station">{step.fromStation.name} → {step.toStation.name}</span>
                 </div>
                 <div className="entry-right">
-                  <span className="entry-event">{entry.event.description}</span>
+                  <span className="entry-event">{step.event.description}</span>
                   <span className="entry-effect">
-                    {entry.event.effect > 0 ? '+' : ''}{entry.event.effect}
+                    {step.event.effect > 0 ? '+' : ''}{step.event.effect}
                   </span>
+                  <span className="entry-total">({step.coins} coins)</span>
                 </div>
               </div>
             ))}
           </div>
 
-          {!allStopsRevealed ? (
-            <button className="game-btn primary" onClick={revealNext}>
+          {!allRevealed ? (
+            <button className="game-btn primary" onClick={() => setStepIndex(i => i + 1)}>
               Next Stop →
             </button>
           ) : (
@@ -363,42 +379,33 @@ export default function GamePage() {
     );
   }
 
-  // ── RESULT ───────────────────────────────────────────────────────────────────
+  // ── RESULT ────────────────────────────────────────────────────────────────────
+  const finalScore = gameResult?.finalScore ?? 0;
+  const isValid = gameResult?.valid ?? false;
+
   return (
     <div className="game-page">
       <div className="game-panel result-panel">
         <h2 className="phase-title">Result</h2>
 
-        <div className={`final-score ${score >= 0 ? 'pos' : 'neg'}`}>
-          {score > 0 ? '+' : ''}{score}
+        <div className={`final-score ${finalScore > 0 ? 'pos' : 'zero'}`}>
+          {finalScore} coins
         </div>
 
-        {reachedDestination ? (
-          <p className="result-msg success">You reached {destination?.name}!</p>
+        {isValid ? (
+          <p className="result-msg success">
+            Valid route! You reached <strong>{destination?.name}</strong>.
+          </p>
         ) : (
-          <p className="result-msg">
-            You stopped at <strong>{currentStation?.name}</strong>.
-            Destination was <strong>{destination?.name}</strong>.
+          <p className="result-msg invalid">
+            Invalid or incomplete route — score: 0 coins.
           </p>
         )}
 
-        <div className="result-stats">
-          <span>Stops: {plannedStops.length}</span>
-          <span>Events: {eventLog.length}</span>
-        </div>
-
         {error && <p className="game-error">{error}</p>}
 
-        {!savedGame ? (
-          <button className="game-btn primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save Score'}
-          </button>
-        ) : (
-          <p className="saved-msg">Score saved!</p>
-        )}
-
         <div className="result-actions">
-          <button className="game-btn" onClick={playAgain}>Play Again</button>
+          <button className="game-btn primary" onClick={playAgain}>Play Again</button>
           <button className="game-btn secondary" onClick={() => navigate('/ranking')}>
             View Ranking
           </button>

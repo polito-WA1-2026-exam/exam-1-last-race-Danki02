@@ -19,7 +19,7 @@ export default function RankingPage() {
   return (
     <div className="ranking-page">
       <div className="ranking-panel">
-        <h2 className="ranking-title">Ranking</h2>
+        <h2 className="ranking-title">Ranking — Best Scores</h2>
 
         {loading && <p className="ranking-loading">Loading…</p>}
         {error && <p className="ranking-error">{error}</p>}
@@ -34,14 +34,14 @@ export default function RankingPage() {
               <tr>
                 <th>#</th>
                 <th>Player</th>
-                <th>Score</th>
-                <th>Date</th>
+                <th>Best Score</th>
+                <th>Games Played</th>
               </tr>
             </thead>
             <tbody>
               {ranking.map((entry, i) => (
                 <tr
-                  key={i}
+                  key={entry.username}
                   className={
                     (i === 0 ? 'rank-gold ' : i === 1 ? 'rank-silver ' : i === 2 ? 'rank-bronze ' : '') +
                     (entry.username === user?.username ? 'rank-me' : '')
@@ -54,12 +54,8 @@ export default function RankingPage() {
                       <span className="you-badge"> (you)</span>
                     )}
                   </td>
-                  <td className={`rank-score ${entry.score >= 0 ? 'pos' : 'neg'}`}>
-                    {entry.score > 0 ? '+' : ''}{entry.score}
-                  </td>
-                  <td className="rank-date">
-                    {new Date(entry.played_at).toLocaleDateString('it-IT')}
-                  </td>
+                  <td className="rank-score pos">{entry.score}</td>
+                  <td className="rank-games">{entry.games_played}</td>
                 </tr>
               ))}
             </tbody>

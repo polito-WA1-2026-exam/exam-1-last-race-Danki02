@@ -1,66 +1,52 @@
 const SERVER = 'http://localhost:3001/api';
 
+async function request(path, options = {}) {
+  const res = await fetch(`${SERVER}${path}`, { credentials: 'include', ...options });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
 export async function login(username, password) {
-  const res = await fetch(`${SERVER}/sessions`, {
+  return request('/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ username, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Login failed.');
-  return data;
 }
 
 export async function logout() {
-  const res = await fetch(`${SERVER}/sessions/current`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Logout failed.');
+  return request('/sessions/current', { method: 'DELETE' });
 }
 
 export async function getCurrentUser() {
-  const res = await fetch(`${SERVER}/sessions/current`, {
-    credentials: 'include',
-  });
+  const res = await fetch(`${SERVER}/sessions/current`, { credentials: 'include' });
   if (res.status === 401) return null;
   if (!res.ok) throw new Error('Failed to fetch session.');
-  return await res.json();
+  return res.json();
 }
 
 export async function getNetwork() {
-  const res = await fetch(`${SERVER}/network`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch network.');
-  return res.json();
+  return request('/network');
 }
 
-export async function getEvents() {
-  const res = await fetch(`${SERVER}/events`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch events.');
-  return res.json();
-}
-
-export async function saveGame(score) {
-  const res = await fetch(`${SERVER}/games`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ score }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to save game.');
-  return data;
+export async function getSegments() {
+  return request('/segments');
 }
 
 export async function getGameSetup() {
-  const res = await fetch(`${SERVER}/game/setup`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch game setup.');
-  return res.json();
+  return request('/game/setup');
+}
+
+// route: array of station IDs [startId, ..., destId]
+export async function executeGame(route) {
+  return request('/game/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ route }),
+  });
 }
 
 export async function getRanking() {
-  const res = await fetch(`${SERVER}/ranking`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch ranking.');
-  return res.json();
+  return request('/ranking');
 }

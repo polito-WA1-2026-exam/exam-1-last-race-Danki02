@@ -72,11 +72,10 @@
 
 .rank-me td { font-weight: 600; }
 
-.rank-pos   { font-size: 0.8rem; color: #8888aa !important; }
-.rank-score { font-weight: 700; }
+.rank-pos    { font-size: 0.8rem; color: #8888aa !important; }
+.rank-score  { font-weight: 700; }
 .rank-score.pos { color: #2ecc71 !important; }
-.rank-score.neg { color: #e74c3c !important; }
-.rank-date  { font-size: 0.8rem; color: #8888aa !important; }
+.rank-games  { font-size: 0.82rem; color: #8888aa !important; text-align: center; }
 
 .you-badge {
   font-size: 0.75rem;

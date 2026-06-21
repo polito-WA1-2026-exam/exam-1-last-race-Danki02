@@ -1,0 +1,100 @@
+.instr-page {
+  min-height: calc(100vh - 54px);
+  background: #0f0f1a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+}
+
+.instr-panel {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.instr-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #f39c12;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.instr-subtitle {
+  font-size: 1rem;
+  color: #8888aa;
+  margin: -1.5rem 0 0;
+}
+
+.instr-section h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f39c12;
+  margin: 0 0 0.75rem;
+  border-bottom: 1px solid #2a2a4a;
+  padding-bottom: 0.5rem;
+}
+
+.instr-steps,
+.instr-rules {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  color: #c0c0d8;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.instr-steps li strong,
+.instr-rules li strong {
+  color: #e0e0e0;
+}
+
+.instr-rules li em {
+  color: #f39c12;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.instr-login-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2a2a4a;
+  text-align: center;
+}
+
+.instr-login-cta p {
+  color: #8888aa;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.instr-btn {
+  display: inline-block;
+  background: #f39c12;
+  color: #1a1a2e;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.6rem 2rem;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.instr-btn:hover {
+  background: #e67e22;
+}

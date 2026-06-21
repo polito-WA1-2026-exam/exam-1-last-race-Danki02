@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import './InstructionsPage.css';
 
 export default function InstructionsPage() {
+  const { user } = useAuth();
+
   return (
     <div className="instr-page">
       <div className="instr-panel">
@@ -52,8 +55,17 @@ export default function InstructionsPage() {
         </div>
 
         <div className="instr-login-cta">
-          <p>Log in to start playing and appear on the ranking board.</p>
-          <Link to="/login" className="instr-btn">Log in</Link>
+          {user ? (
+            <>
+              <p>Ready to play?</p>
+              <Link to="/game" className="instr-btn">Play Now</Link>
+            </>
+          ) : (
+            <>
+              <p>Log in to start playing and appear on the ranking board.</p>
+              <Link to="/login" className="instr-btn">Log in</Link>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -17,8 +17,8 @@ export default function GamePage() {
   const [error, setError] = useState('');
 
   // Planning
-  const [route, setRoute] = useState([]);       // [stationId, ...]
-  const routeRef = useRef([]);                  // always-current mirror for timer callback
+  const [route, setRoute] = useState([]);
+  const routeRef = useRef([]);
   const [timeLeft, setTimeLeft] = useState(90);
 
   // Execution / Result
@@ -55,19 +55,17 @@ export default function GamePage() {
   }, [phase, startStation]);
 
   // ── 90-second planning timer ──────────────────────────────────────────────────
-  const submitRouteRef = useRef(null); // forward ref to avoid stale closure
+  const submitRouteRef = useRef(null);
 
   useEffect(() => {
     if (phase !== 'planning') return;
 
-    // Countdown display
     const startTime = Date.now();
     const countInterval = setInterval(() => {
       const remaining = Math.max(0, Math.round((90000 - (Date.now() - startTime)) / 1000));
       setTimeLeft(remaining);
     }, 500);
 
-    // Auto-submit after 90 s
     const timeout = setTimeout(() => {
       clearInterval(countInterval);
       setTimeLeft(0);
@@ -99,7 +97,6 @@ export default function GamePage() {
     }
   }, []);
 
-  // Keep the submit ref in sync
   useEffect(() => {
     submitRouteRef.current = handleSubmit;
   }, [handleSubmit]);
@@ -156,8 +153,11 @@ export default function GamePage() {
   // ── LOADING ───────────────────────────────────────────────────────────────────
   if (phase === 'loading' || phase === 'executing') {
     return (
-      <div className="game-page">
-        <p className="game-loading">{phase === 'executing' ? 'Validating route…' : 'Loading network…'}</p>
+      <div className="loading-screen">
+        <div className="loading-spinner" />
+        <span className="loading-label">
+          {phase === 'executing' ? 'Validating route…' : 'Loading network…'}
+        </span>
       </div>
     );
   }
@@ -167,7 +167,7 @@ export default function GamePage() {
     return (
       <div className="game-page">
         <div className="game-panel">
-          <h2 className="phase-title">Setup — Study the Network</h2>
+          <h2 className="phase-title">Study the Network</h2>
           {error && <p className="game-error">{error}</p>}
 
           <div className="setup-mission">
@@ -223,6 +223,8 @@ export default function GamePage() {
   if (phase === 'planning') {
     const reachedDest = currentStationId === destination?.id;
     const timerClass = timeLeft <= 10 ? 'timer-urgent' : timeLeft <= 30 ? 'timer-warning' : '';
+    const barClass   = timeLeft <= 10 ? 'bar-urgent'   : timeLeft <= 30 ? 'bar-warning'   : 'bar-ok';
+    const barWidth   = (timeLeft / 90) * 100;
     const stationName = id => allStations.find(s => s.id === id)?.name ?? id;
 
     return (
@@ -233,10 +235,18 @@ export default function GamePage() {
             <span>
               <strong>{startStation?.name}</strong> → <strong>{destination?.name}</strong>
             </span>
-            <span className={`planning-timer ${timerClass}`}>⏱ {timeLeft}s</span>
+            <div className="timer-block">
+              <span className={`planning-timer ${timerClass}`}>{timeLeft}s</span>
+              <div className="timer-bar">
+                <div
+                  className={`timer-bar-fill ${barClass}`}
+                  style={{ width: `${barWidth}%` }}
+                />
+              </div>
+            </div>
           </div>
 
-          <h3 className="segments-title">All Segments</h3>
+          <h3 className="segments-title">All Segments ({segments.length})</h3>
           <ul className="segments-list">
             {segments.map((seg, i) => {
               const usable =
@@ -285,6 +295,11 @@ export default function GamePage() {
               <span className="route-pos"> — at: <strong>{stationName(currentStationId)}</strong></span>
             </h3>
 
+            <div className="route-meta">
+              <span className="route-stat">Stops: <strong>{route.length - 1}</strong></span>
+              <span className="route-stat">Usable segments: <strong>{usableSegments.length}</strong></span>
+            </div>
+
             {route.length <= 1 ? (
               <p className="route-empty">Click a segment to start your journey from <strong>{startStation?.name}</strong></p>
             ) : (
@@ -329,17 +344,26 @@ export default function GamePage() {
     const visibleSteps = steps.slice(0, stepIndex);
     const allRevealed = stepIndex >= steps.length;
     const latestCoins = visibleSteps.length > 0 ? visibleSteps[visibleSteps.length - 1].coins : 20;
+    const progressPct = steps.length > 0 ? (stepIndex / steps.length) * 100 : 0;
 
     return (
       <div className="game-page">
         <div className="game-panel">
-          <h2 className="phase-title">Execution</h2>
+          <h2 className="phase-title">Journey</h2>
 
           <div className="exec-header">
-            <span className="exec-progress">{stepIndex} / {steps.length} stops</span>
-            <span className={`exec-score ${latestCoins >= 0 ? 'pos' : 'neg'}`}>
-              Coins: {latestCoins >= 0 ? '+' : ''}{latestCoins}
-            </span>
+            <div className="exec-meta">
+              <span className="exec-progress">{stepIndex} / {steps.length} stops</span>
+              <div className="exec-progress-bar">
+                <div className="exec-progress-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+            <div className="exec-score-block">
+              <div className="exec-score-label">Coins</div>
+              <div className={`exec-score ${latestCoins >= 0 ? 'pos' : 'neg'}`}>
+                {latestCoins >= 0 ? '+' : ''}{latestCoins}
+              </div>
+            </div>
           </div>
 
           <div className="event-log">
@@ -352,14 +376,14 @@ export default function GamePage() {
                 className={`event-entry ${step.event.effect > 0 ? 'ev-pos' : step.event.effect < 0 ? 'ev-neg' : 'ev-neu'}`}
               >
                 <div className="entry-left">
-                  <span className="entry-station">{step.fromStation.name} → {step.toStation.name}</span>
+                  <div className="entry-station">{step.fromStation.name} → {step.toStation.name}</div>
+                  <div className="entry-event">{step.event.description}</div>
                 </div>
                 <div className="entry-right">
-                  <span className="entry-event">{step.event.description}</span>
                   <span className="entry-effect">
                     {step.event.effect > 0 ? '+' : ''}{step.event.effect}
                   </span>
-                  <span className="entry-total">({step.coins} coins)</span>
+                  <span className="entry-total">total: {step.coins}</span>
                 </div>
               </div>
             ))}
@@ -381,25 +405,79 @@ export default function GamePage() {
 
   // ── RESULT ────────────────────────────────────────────────────────────────────
   const finalScore = gameResult?.finalScore ?? 0;
-  const isValid = gameResult?.valid ?? false;
+  const isValid    = gameResult?.valid ?? false;
+  const steps      = gameResult?.steps ?? [];
+
+  // Compute statistics from steps
+  const posSteps     = steps.filter(s => s.event.effect > 0);
+  const negSteps     = steps.filter(s => s.event.effect < 0);
+  const totalGained  = posSteps.reduce((sum, s) => sum + s.event.effect, 0);
+  const totalLost    = negSteps.reduce((sum, s) => sum + s.event.effect, 0);
+  const avgEffect    = steps.length > 0
+    ? (steps.reduce((sum, s) => sum + s.event.effect, 0) / steps.length).toFixed(1)
+    : '—';
+  const bestStep  = steps.length > 0 ? steps.reduce((b, s) => s.event.effect > b.event.effect ? s : b, steps[0]) : null;
+  const worstStep = steps.length > 0 ? steps.reduce((w, s) => s.event.effect < w.event.effect ? s : w, steps[0]) : null;
 
   return (
     <div className="game-page">
       <div className="game-panel result-panel">
         <h2 className="phase-title">Result</h2>
 
-        <div className={`final-score ${finalScore > 0 ? 'pos' : 'zero'}`}>
-          {finalScore} coins
+        <div className="final-score-block">
+          <div className="final-score-label">Final Score</div>
+          <div className={`final-score ${finalScore > 0 ? 'pos' : 'zero'}`}>
+            {finalScore}
+          </div>
+          <div className="final-score-label">coins</div>
         </div>
 
         {isValid ? (
           <p className="result-msg success">
-            Valid route! You reached <strong>{destination?.name}</strong>.
+            Valid route — you reached <strong>{destination?.name}</strong>.
           </p>
         ) : (
           <p className="result-msg invalid">
             Invalid or incomplete route — score: 0 coins.
           </p>
+        )}
+
+        {steps.length > 0 && (
+          <>
+            <hr className="result-divider" />
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-label">Stops</div>
+                <div className="stat-value accent">{steps.length}</div>
+                <div className="stat-sub">segments travelled</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Positive Events</div>
+                <div className="stat-value pos">{posSteps.length}</div>
+                <div className="stat-sub">+{totalGained} coins gained</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Negative Events</div>
+                <div className="stat-value neg">{negSteps.length}</div>
+                <div className="stat-sub">{totalLost} coins lost</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Avg. per Stop</div>
+                <div className={`stat-value ${Number(avgEffect) >= 0 ? 'pos' : 'neg'}`}>{avgEffect}</div>
+                <div className="stat-sub">coins/segment</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Best Event</div>
+                <div className="stat-value pos">{bestStep ? `+${bestStep.event.effect}` : '—'}</div>
+                <div className="stat-sub">{bestStep?.toStation?.name ?? ''}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Worst Event</div>
+                <div className="stat-value neg">{worstStep ? worstStep.event.effect : '—'}</div>
+                <div className="stat-sub">{worstStep?.toStation?.name ?? ''}</div>
+              </div>
+            </div>
+          </>
         )}
 
         {error && <p className="game-error">{error}</p>}

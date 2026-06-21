@@ -24,6 +24,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/" element={user ? <HomePage /> : <InstructionsPage />} />
+        <Route path="/instructions" element={<InstructionsPage />} />
         <Route path="/game"    element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
         <Route path="/ranking" element={<ProtectedRoute><RankingPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -19,11 +19,15 @@ export default function NavBar() {
           <>
             <Link to="/game">Play</Link>
             <Link to="/ranking">Ranking</Link>
+            <Link to="/instructions">How to Play</Link>
             <span className="navbar-user">{user.username}</span>
             <button className="navbar-logout" onClick={handleLogout}>Logout</button>
           </>
         ) : (
-          <Link to="/login" className="navbar-login-link">Login</Link>
+          <>
+            <Link to="/instructions">How to Play</Link>
+            <Link to="/login" className="navbar-login-link">Login</Link>
+          </>
         )}
       </div>
     </nav>

@@ -85,4 +85,8 @@
 
 ## Use of AI Tools
 
-AI tools were used to assist with CSS styling and to support debugging and the implementation of the game logic. In both cases the AI-generated output was reviewed, tested, and integrated manually.
+AI tools were used throughout the development process in several ways.
+On the front-end side, AI assistance helped refine and generate CSS styling for a consistent visual design. All suggested styles were reviewed and adjusted manually to fit the project's needs.
+AI tools also supported debugging and the implementation of the game logic, proposing solutions that were then evaluated, tested, and integrated by hand.
+Beyond the code, AI was useful in making architectural and organizational decisions — such as structuring client-server communication, splitting responsibilities between modules, and organizing the project layout.
+Additional inspiration for the overall structure was drawn from the lab08 exercise, which served as a useful reference for the socket-based communication pattern and the general organization of a multiplayer client-server game.

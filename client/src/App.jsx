@@ -8,6 +8,7 @@ import GamePage from './pages/GamePage.jsx';
 import RankingPage from './pages/RankingPage.jsx';
 import InstructionsPage from './pages/InstructionsPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -45,7 +46,7 @@ function App() {
         <Route path="/instructions" element={<InstructionsPage loggedIn={loggedIn} />} />
         <Route path="/game"         element={<ProtectedRoute loggedIn={loggedIn}><GamePage /></ProtectedRoute>} />
         <Route path="/ranking"      element={<ProtectedRoute loggedIn={loggedIn}><RankingPage user={user} /></ProtectedRoute>} />
-        <Route path="*"             element={<Navigate replace to="/" />} />
+        <Route path="*"             element={<NotFoundPage />} />
       </Routes>
     </>
   );

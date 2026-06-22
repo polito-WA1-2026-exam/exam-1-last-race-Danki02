@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
+import { Award } from 'react-bootstrap-icons';
 import { getRanking } from '../api.js';
 import './RankingPage.css';
 
-// Top-3 medal badges styled via CSS classes
-const MEDALS = [
-  <span className="medal medal-gold">1°</span>,
-  <span className="medal medal-silver">2°</span>,
-  <span className="medal medal-bronze">3°</span>,
-];
+const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
+
+const MEDALS = MEDAL_COLORS.map(color => (
+  <Award size={22} color={color} />
+));
 
 export default function RankingPage({ user }) {
   const [ranking, setRanking] = useState([]);

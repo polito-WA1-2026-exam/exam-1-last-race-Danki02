@@ -26,7 +26,9 @@ src/
 │   ├── GamePage.jsx             # game orchestrator (state + phase logic)
 │   ├── GamePage.css
 │   ├── RankingPage.jsx          # global leaderboard
-│   └── RankingPage.css
+│   ├── RankingPage.css
+│   ├── NotFoundPage.jsx         # 404 page for unknown routes
+│   └── NotFoundPage.css
 └── components/
     ├── NavBar.jsx               # top navigation bar
     ├── NavBar.css
@@ -47,7 +49,7 @@ src/
 | `/instructions`| `InstructionsPage`                                    | —        |
 | `/game`        | `GamePage`                                            | required |
 | `/ranking`     | `RankingPage`                                         | required |
-| `*`            | redirect to `/`                                       | —        |
+| `*`            | `NotFoundPage` (404)                                  | —        |
 
 ## Game phases
 

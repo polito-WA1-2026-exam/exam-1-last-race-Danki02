@@ -77,11 +77,6 @@
   line-height: 1;
 }
 
-.medal {
-  color: #ffffff;
-  font-weight: 700;
-}
-
 .podium-name {
   font-size: 0.8rem;
   font-weight: 700;
@@ -203,5 +198,6 @@
 }
 
 .rank-medal {
+  vertical-align: middle;
   margin-right: 0.3rem;
 }

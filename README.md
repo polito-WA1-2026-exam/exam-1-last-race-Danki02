@@ -9,7 +9,7 @@
 - Route `/instructions`: shows the game rules (accessible to everyone)
 - Route `/game`: runs the game (Setup → Planning → Execution → Result); protected, redirects to `/login` if not authenticated
 - Route `/ranking`: shows the global leaderboard with best scores; protected, redirects to `/login` if not authenticated
-- Route `*`: catch-all, redirects to `/`
+- Route `*`: catch-all, shows `NotFoundPage` (404)
 
 ## API Server
 
@@ -64,6 +64,7 @@
 - `LoginPage` (in `src/pages/LoginPage.jsx`): login form; calls the `login` handler passed from `App`
 - `HomePage` (in `src/pages/HomePage.jsx`): welcome screen for logged-in users with links to play, ranking, and instructions
 - `InstructionsPage` (in `src/pages/InstructionsPage.jsx`): game rules page accessible to all users; shows a "Play Now" or "Log in" CTA depending on auth state
+- `NotFoundPage` (in `src/pages/NotFoundPage.jsx`): 404 page shown on any unknown route; displays an error icon and a link back to home
 
 ## Screenshots
 

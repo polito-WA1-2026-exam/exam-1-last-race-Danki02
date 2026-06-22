@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
 import './InstructionsPage.css';
 
-export default function InstructionsPage() {
-  const { user } = useAuth();
+export default function InstructionsPage({ loggedIn }) {
 
   return (
     <div className="instr-page">
@@ -54,8 +52,9 @@ export default function InstructionsPage() {
           </ul>
         </div>
 
+        {/* Call to action: link to play if logged in, otherwise prompt to log in */}
         <div className="instr-login-cta">
-          {user ? (
+          {loggedIn ? (
             <>
               <p>Ready to play?</p>
               <Link to="/game" className="instr-btn">Play Now</Link>

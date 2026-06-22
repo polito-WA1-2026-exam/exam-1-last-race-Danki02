@@ -1,16 +1,74 @@
-# React + Vite
+# Last Race — Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the Last Race exam project.
 
-Currently, two official plugins are available:
+## Getting started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cd client
+npm install
+npm run dev      # starts on http://localhost:5173
+```
 
-## React Compiler
+The server must be running on `http://localhost:3001` before using the app.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Project structure
 
-## Expanding the ESLint configuration
+```text
+src/
+├── App.jsx                      # root component — auth state + routing
+├── main.jsx                     # React entry point
+├── api.js                       # all fetch calls to the server
+├── pages/
+│   ├── HomePage.jsx             # welcome screen (logged-in users)
+│   ├── InstructionsPage.jsx     # game rules (public)
+│   ├── LoginPage.jsx            # login form
+│   ├── GamePage.jsx             # game orchestrator (state + phase logic)
+│   ├── GamePage.css
+│   ├── RankingPage.jsx          # global leaderboard
+│   └── RankingPage.css
+└── components/
+    ├── NavBar.jsx               # top navigation bar
+    ├── NavBar.css
+    ├── ProtectedRoute.jsx       # redirects unauthenticated users to /login
+    └── game/
+        ├── SetupPhase.jsx       # network map + mission assignment
+        ├── PlanningPhase.jsx    # 90s timer + segment picker + route builder
+        ├── ExecutionPhase.jsx   # step-by-step journey reveal
+        └── ResultPhase.jsx      # final score + statistics
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Routes
+
+| Path           | Component                                             | Auth     |
+| -------------- | ----------------------------------------------------- | -------- |
+| `/`            | `HomePage` if logged in, `InstructionsPage` if not    | —        |
+| `/login`       | `LoginPage` (redirects to `/` if already logged in)   | —        |
+| `/instructions`| `InstructionsPage`                                    | —        |
+| `/game`        | `GamePage`                                            | required |
+| `/ranking`     | `RankingPage`                                         | required |
+| `*`            | redirect to `/`                                       | —        |
+
+## Game phases
+
+`GamePage.jsx` holds all state and switches between four phase components:
+
+1. **Setup** (`SetupPhase`) — shows the full metro network and the assigned start/destination pair
+2. **Planning** (`PlanningPhase`) — 90-second timer, clickable segment list, route builder
+3. **Execution** (`ExecutionPhase`) — reveals each step one at a time with random events and coin changes
+4. **Result** (`ResultPhase`) — final score, validity message, and per-game statistics
+
+## API calls (`src/api.js`)
+
+All requests go to `http://localhost:3001/api` with `credentials: 'include'` for session cookies.
+
+| Function                    | Method | Endpoint              |
+| --------------------------- | ------ | --------------------- |
+| `login(username, password)` | POST   | `/sessions`           |
+| `logout()`                  | DELETE | `/sessions/current`   |
+| `getCurrentUser()`          | GET    | `/sessions/current`   |
+| `getNetwork()`              | GET    | `/network`            |
+| `getSegments()`             | GET    | `/segments`           |
+| `getGameSetup()`            | GET    | `/game/setup`         |
+| `executeGame(route)`        | POST   | `/game/execute`       |
+| `getRanking()`              | GET    | `/ranking`            |

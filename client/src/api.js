@@ -1,5 +1,6 @@
 const SERVER = 'http://localhost:3001/api';
 
+// Generic fetch wrapper: throws if the response is not ok
 async function request(path, options = {}) {
   const res = await fetch(`${SERVER}${path}`, { credentials: 'include', ...options });
   const data = await res.json().catch(() => ({}));
@@ -7,6 +8,7 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Auth
 export async function login(username, password) {
   return request('/sessions', {
     method: 'POST',
@@ -19,6 +21,7 @@ export async function logout() {
   return request('/sessions/current', { method: 'DELETE' });
 }
 
+// Returns the logged-in user or null if no active session
 export async function getCurrentUser() {
   const res = await fetch(`${SERVER}/sessions/current`, { credentials: 'include' });
   if (res.status === 401) return null;
@@ -26,6 +29,7 @@ export async function getCurrentUser() {
   return res.json();
 }
 
+// Game
 export async function getNetwork() {
   return request('/network');
 }
@@ -38,7 +42,7 @@ export async function getGameSetup() {
   return request('/game/setup');
 }
 
-// route: array of station IDs [startId, ..., destId]
+// Sends the built route (array of station IDs) and returns the scored result
 export async function executeGame(route) {
   return request('/game/execute', {
     method: 'POST',
@@ -47,6 +51,7 @@ export async function executeGame(route) {
   });
 }
 
+// Ranking
 export async function getRanking() {
   return request('/ranking');
 }

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
-import { login } from '../api.js';
 import './LoginPage.css';
 
-export default function LoginPage() {
-  const { setUser } = useAuth();
+export default function LoginPage({ login }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Validate fields, then call the login function passed by App
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password) {
@@ -19,8 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const user = await login(username.trim(), password);
-      setUser(user);
+      await login({ username: username.trim(), password });
     } catch (err) {
       setError(err.message);
     } finally {

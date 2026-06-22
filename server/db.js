@@ -1,4 +1,4 @@
-/** DB access module **/
+// Opens the SQLite database and creates tables and seed data if they don't exist
 
 import sqlite3 from 'sqlite3';
 import crypto from 'crypto';
@@ -8,7 +8,6 @@ const db = new sqlite3.Database('last_race.db', (err) => {
 });
 
 db.serialize(() => {
-    db.run('PRAGMA journal_mode = DELETE');
     db.run('PRAGMA foreign_keys = ON');
 
     db.run(`CREATE TABLE IF NOT EXISTS users (
@@ -51,47 +50,66 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
 
-    // Seed metro lines (INSERT OR IGNORE is idempotent)
-    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (1, 'Linea Rossa')");
-    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (2, 'Linea Blu')");
-    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (3, 'Linea Verde')");
-    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (4, 'Linea Gialla')");
+    // Seed metro lines — one per city
+    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (1, 'Linea Torino')");
+    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (2, 'Linea Milano')");
+    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (3, 'Linea Catania')");
+    db.run("INSERT OR IGNORE INTO lines (id, name) VALUES (4, 'Linea Napoli')");
+    db.run("UPDATE lines SET name = 'Linea Torino'  WHERE id = 1");
+    db.run("UPDATE lines SET name = 'Linea Milano'  WHERE id = 2");
+    db.run("UPDATE lines SET name = 'Linea Catania' WHERE id = 3");
+    db.run("UPDATE lines SET name = 'Linea Napoli'  WHERE id = 4");
 
-    // Seed stations
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (1,  'Centrale')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (2,  'Porta Velaria')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (3,  'Crocevia del Falco')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (4,  'Piazza delle Lanterne')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (5,  'Arco di Nebbia')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (6,  'Fontana Oscura')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (7,  'Borgo Sereno')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (8,  'Viale dei Mosaici')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (9,  'Porto Nascosto')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (10, 'Torre Cinerea')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (11, 'Campo dell''Eco')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (12, 'Giardino d''Ombra')");
-    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (13, 'Lago dei Vapori')");
+    // Seed stations — real Italian metro stations
+    // Shared interchange stations use names that exist in multiple cities
+    // (Loreto: Milano M1/M2 + Napoli L1 | Duomo: Milano + Catania | Borgo: Catania + Napoli)
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (1,  'Porta Susa')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (2,  'Re Umberto')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (3,  'Lingotto')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (4,  'XVIII Dicembre')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (5,  'Principi d''Acaja')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (6,  'Duomo')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (7,  'Cadorna')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (8,  'Loreto')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (9,  'Centrale')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (10, 'Stesicoro')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (11, 'Borgo')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (12, 'Nesima')");
+    db.run("INSERT OR IGNORE INTO stations (id, name) VALUES (13, 'Toledo')");
+    db.run("UPDATE stations SET name = 'Porta Susa'       WHERE id = 1");
+    db.run("UPDATE stations SET name = 'Re Umberto'       WHERE id = 2");
+    db.run("UPDATE stations SET name = 'Lingotto'         WHERE id = 3");
+    db.run("UPDATE stations SET name = 'XVIII Dicembre'   WHERE id = 4");
+    db.run("UPDATE stations SET name = 'Principi d''Acaja' WHERE id = 5");
+    db.run("UPDATE stations SET name = 'Duomo'            WHERE id = 6");
+    db.run("UPDATE stations SET name = 'Cadorna'          WHERE id = 7");
+    db.run("UPDATE stations SET name = 'Loreto'           WHERE id = 8");
+    db.run("UPDATE stations SET name = 'Centrale'         WHERE id = 9");
+    db.run("UPDATE stations SET name = 'Stesicoro'        WHERE id = 10");
+    db.run("UPDATE stations SET name = 'Borgo'            WHERE id = 11");
+    db.run("UPDATE stations SET name = 'Nesima'           WHERE id = 12");
+    db.run("UPDATE stations SET name = 'Toledo'           WHERE id = 13");
 
     // Seed line_stations: (line_id, station_id, position)
-    // Linea Rossa (1): Centrale → Porta Velaria → Crocevia del Falco → Piazza delle Lanterne → Arco di Nebbia
+    // Torino (1): Porta Susa → Re Umberto → Lingotto → XVIII Dicembre → Principi d'Acaia
     db.run("INSERT OR IGNORE INTO line_stations VALUES (1, 1,  1)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (1, 2,  2)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (1, 3,  3)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (1, 4,  4)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (1, 5,  5)");
-    // Linea Blu (2): Centrale → Fontana Oscura → Borgo Sereno → Viale dei Mosaici → Porto Nascosto
+    // Milano (2): Porta Susa → Duomo → Cadorna → Loreto → Centrale
     db.run("INSERT OR IGNORE INTO line_stations VALUES (2, 1,  1)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (2, 6,  2)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (2, 7,  3)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (2, 8,  4)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (2, 9,  5)");
-    // Linea Verde (3): Porta Velaria → Fontana Oscura → Torre Cinerea → Campo dell'Eco → Giardino d'Ombra
+    // Catania (3): Re Umberto → Duomo → Stesicoro → Borgo → Nesima
     db.run("INSERT OR IGNORE INTO line_stations VALUES (3, 2,  1)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (3, 6,  2)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (3, 10, 3)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (3, 11, 4)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (3, 12, 5)");
-    // Linea Gialla (4): Piazza delle Lanterne → Torre Cinerea → Viale dei Mosaici → Campo dell'Eco → Lago dei Vapori
+    // Napoli (4): XVIII Dicembre → Stesicoro → Loreto → Borgo → Toledo
     db.run("INSERT OR IGNORE INTO line_stations VALUES (4, 4,  1)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (4, 10, 2)");
     db.run("INSERT OR IGNORE INTO line_stations VALUES (4, 8,  3)");
@@ -101,13 +119,13 @@ db.serialize(() => {
     // Seed events
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (1,  'Quiet journey',      0)");
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (2,  'Wrong platform',    -2)");
-    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (3,  'Kind passenger',    +1)");
+    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (3,  'Kind passenger',    1)");
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (4,  'Signal delay',      -1)");
-    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (5,  'Express service',   +2)");
+    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (5,  'Express service',   2)");
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (6,  'Lost ticket',       -3)");
-    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (7,  'Found wallet',      +4)");
+    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (7,  'Found wallet',      4)");
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (8,  'Crowded train',     -4)");
-    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (9,  'Helpful conductor', +3)");
+    db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (9,  'Helpful conductor', 3)");
     db.run("INSERT OR IGNORE INTO events (id, description, effect) VALUES (10, 'Missed stop',       -2)");
 
     // Seed test users and pre-existing games (only if table is empty)

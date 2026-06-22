@@ -1,11 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
 import './NavBar.css';
 
-export default function NavBar() {
-  const { user, logout } = useAuth();
+export default function NavBar({ user, loggedIn, logout }) {
   const navigate = useNavigate();
 
+  // Call the logout function from App, then redirect to login
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -15,7 +14,8 @@ export default function NavBar() {
     <nav className="navbar">
       <Link to="/" className="navbar-brand">Last Race</Link>
       <div className="navbar-links">
-        {user ? (
+        {/* Show full nav when logged in, minimal links otherwise */}
+        {loggedIn ? (
           <>
             <Link to="/game">Play</Link>
             <Link to="/ranking">Ranking</Link>

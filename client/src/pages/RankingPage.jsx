@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { getRanking } from '../api.js';
 import './RankingPage.css';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+// Top-3 medal badges styled via CSS classes
+const MEDALS = [
+  <span className="medal medal-gold">1°</span>,
+  <span className="medal medal-silver">2°</span>,
+  <span className="medal medal-bronze">3°</span>,
+];
 
-export default function RankingPage() {
-  const { user } = useAuth();
+export default function RankingPage({ user }) {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Fetch the global leaderboard on mount
   useEffect(() => {
     getRanking()
       .then(setRanking)
@@ -35,7 +39,7 @@ export default function RankingPage() {
 
         {!loading && ranking.length > 0 && (
           <>
-            {/* ── Podium for top 3 ── */}
+            {/* Podium: visual display of the top 3 players */}
             {top3.length >= 2 && (
               <div className="ranking-podium">
                 {top3.map((entry, i) => (
@@ -51,7 +55,7 @@ export default function RankingPage() {
               </div>
             )}
 
-            {/* ── Full table ── */}
+            {/* Full leaderboard table with all players */}
             <table className="ranking-table">
               <thead>
                 <tr>
